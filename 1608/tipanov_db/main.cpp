@@ -24,12 +24,11 @@ int main(int argc, char* argv[])
 	//int n = 666666;
 	int countelem = 0;
 	countelem = n / ProcNum;
-	int *mas = new int[n];
-	int *tmp = new int[countelem];
 	//для 0-го процесса
 	if (ProcRank == 0)
 	{
 		srand(time(0));
+		int *mas = new int[n];
 		for (int i = 0; i < n; i++)
 		{
 			mas[i] = rand() % 10; //заполняем массив случайным образом
@@ -46,7 +45,7 @@ int main(int argc, char* argv[])
 		//отправляем массивы процессам
 		for (int i = 1; i < ProcNum; i++)
 		{
-			tmp = mas + countelem * (i - 1);
+			int *tmp = mas + countelem * (i - 1);
 			MPI_Send(tmp, countelem, MPI_INT, i, 0, MPI_COMM_WORLD);
 		}
 
@@ -54,15 +53,17 @@ int main(int argc, char* argv[])
 		{
 			paralSum += mas[i];
 		}
+		delete[] mas;
 	}
 
 	//для всех остальных процессов
 	if (ProcRank != 0)
 	{
+		int *tmp = new int[countelem];
 		MPI_Recv(tmp, countelem, MPI_INT, 0, 0, MPI_COMM_WORLD, &Status);
 		for (int i = 0; i<countelem; i++)
 			paralSum += tmp[i];
-		delete tmp;
+		delete[] tmp;
 	}
 	MPI_Reduce(&paralSum, &totalSum, 1, MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
 	if (ProcRank == 0)
@@ -70,7 +71,6 @@ int main(int argc, char* argv[])
 		parTimeEnd = MPI_Wtime();
 		printf("Parallel sum = %d\ntime = %.9f\n", totalSum, parTimeEnd - parTimeStart);
 	}
-	delete mas;
 	MPI_Finalize(); //окончание блока mpi
 	return 0;
 }
